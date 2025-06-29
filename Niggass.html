@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Roulette PURA VIDA</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      overflow: hidden;
+      height: 100vh;
+      background-color: #000;
+      background-repeat: repeat;
+      background-size: 150px;
+      background-position: center;
+      position: relative;
+    }
+
+    #stars {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .star {
+      position: absolute;
+      background-color: #fff7c2;
+      border-radius: 50%;
+      opacity: 0.8;
+      animation: twinkle 3s infinite;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.4); }
+    }
+
+    h1 {
+      color: #d16c6c;
+      text-transform: uppercase;
+      font-family: 'Georgia', serif;
+      z-index: 2;
+      position: relative;
+    }
+
+    canvas {
+      border-radius: 50%;
+      background-color: #fff;
+      box-shadow: 0 0 20px #222 inset, 0 0 15px #ffb347;
+      z-index: 2;
+      position: relative;
+    }
+
+    #container {
+      position: relative;
+      display: inline-block;
+      z-index: 2;
+    }
+
+    #pointer {
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-top: 30px solid #ff7f50;
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      filter: drop-shadow(2px 2px 2px #000);
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px 24px;
+      font-size: 20px;
+      cursor: pointer;
+      font-family: 'Segoe UI', sans-serif;
+      transition: opacity 0.3s;
+      z-index: 2;
+      position: relative;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+    }
+
+    #message {
+      margin-top: 30px;
+      font-size: 26px;
+      font-weight: bold;
+      height: 40px;
+      z-index: 2;
+      position: relative;
+    }
+
+    .confetti {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 10;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: red;
+      animation: fall 3s linear infinite;
+    }
+
+    @keyframes fall {
+      to {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    #popup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px;
+      border: 3px solid #6a4c93;
+      border-radius: 10px;
+      z-index: 100;
+      font-size: 24px;
+      font-weight: bold;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    #popup button {
+      margin-top: 15px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div id="stars"></div>
+
+  <h1>Roulette PURA VIDA</h1>
+  <div id="container">
+    <div id="pointer"></div>
+    <canvas id="roulette" width="400" height="400"></canvas>
+  </div>
+  <br>
+  <button id="spinButton" onclick="spin()">Gira la ruota</button>
+  <div id="message"></div>
+  <div class="confetti" id="confetti"></div>
+
+  <div id="popup">
+    <div id="popupMessage"></div>
+    <button onclick="closePopup()">OK!</button>
+  </div>
+
+  <script>
+    // Generazione stelle animate
+    const starsContainer = document.getElementById('stars');
+    for (let i = 0; i < 100; i++) {
+      const star = document.createElement('div');
+      const size = Math.random() * 2 + 1;
+      star.classList.add('star');
+      star.style.width = `${size}px`;
+      star.style.height = `${size}px`;
+      star.style.top = `${Math.random() * 100}%`;
+      star.style.left = `${Math.random() * 100}%`;
+      star.style.animationDuration = `${2 + Math.random() * 3}s`;
+      starsContainer.appendChild(star);
+    }
+
+    // Roulette
+    const canvas = document.getElementById("roulette");
+    const ctx = canvas.getContext("2d");
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 180;
+    const segments = 9;
+    const letters = ["P", "U", "R", "A", "V", "I", "D", "A", "🥃"];
+    const colors = letters.map((l, i) => {
+      if (l === "🥃") return "#FFD700"; // oro per shot
+      return i % 2 === 0 ? "#1c3d1c" : "#ffffff"; // verde scuro alternato a bianco
+    });
+    let angleOffset = 0;
+    const angleStep = (2 * Math.PI) / segments;
+    let isSpinning = false;
+
+    function drawRoulette() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(angleOffset);
+
+      for (let i = 0; i < segments; i++) {
+        const startAngle = i * angleStep;
+        const endAngle = startAngle + angleStep;
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+
+        // Separatori
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(radius * Math.cos(startAngle), radius * Math.sin(startAngle));
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.save();
+        ctx.rotate(startAngle + angleStep / 2);
+        ctx.translate(radius - 30, 0);
+        ctx.rotate(-angleOffset - startAngle - angleStep / 2);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.font = "bold 26px 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#000";
+        ctx.fillText(letters[i], 0, 0);
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius + 10, 0, 2 * Math.PI);
+      ctx.lineWidth = 20;
+      ctx.strokeStyle = "#ffb347";
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
+      ctx.fillStyle = "#ffae42";
+      ctx.shadowColor = "#000";
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    function spin() {
+      if (isSpinning) return;
+      isSpinning = true;
+      const button = document.getElementById("spinButton");
+      button.disabled = true;
+      button.style.opacity = 0.5;
+      document.getElementById("popup").style.display = "none";
+      clearConfetti();
+
+      const fullSpins = 6 * Math.PI;
+      const extraSpin = Math.random() * 2 * Math.PI;
+      const targetSpin = fullSpins + extraSpin;
+      const duration = 3000;
+      const start = performance.now();
+      let lastTime = start;
+
+      function animate(time) {
+        const elapsed = time - start;
+        const delta = time - lastTime;
+        lastTime = time;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+
+        angleOffset += ((targetSpin * eased) - angleOffset) * 0.1;
+        drawRoulette();
+
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          angleOffset = angleOffset % (2 * Math.PI);
+          drawRoulette();
+          showResult();
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function showResult() {
+      const normalized = (angleOffset) % (2 * Math.PI);
+      const pointerAngle = (3 * Math.PI / 2 - normalized + 2 * Math.PI) % (2 * Math.PI);
+      const segmentIndex = Math.floor(pointerAngle / angleStep) % segments;
+
+      const popup = document.getElementById("popup");
+      const popupMessage = document.getElementById("popupMessage");
+
+      const isWin = segmentIndex === 8;
+      popupMessage.textContent = getRandomMessage(isWin);
+
+      if (isWin) {
+        launchConfetti();
+      }
+
+      popup.style.display = "block";
+      isSpinning = false;
+      const button = document.getElementById("spinButton");
+      button.disabled = false;
+      button.style.opacity = 1;
+    }
+
+    function getRandomMessage(isWin) {
+      const winMessages = [
+        "Grande! Un altro giro per festeggiare!",
+        "Bravo! Questo shot te lo sei meritato.",
+        "Vittoria! Ora bevi e riprova la fortuna.",
+        "Hai colpito nel segno! Altro drink?",
+        "Colpo fortunato! Festeggia con un altro shot.",
+        "Il bar è tuo! Un altro brindisi?",
+        "Giro vincente! Riempici il bicchiere!",
+        "Hai vinto! Prossimo round sul banco.",
+        "Grande serata! Riprova con un altro shot.",
+        "Questo sì che è colpo da maestro! Shot time!",
+        "Brindiamo a questa vincita! Gira ancora!"
+      ];
+
+      const loseMessages = [
+        "Niente shot stavolta... ma puoi sempre ordinare un altro!",
+        "Quasi! Ricarica il bicchiere e riprova.",
+        "Forse il prossimo sarà quello giusto. Bevi ancora!",
+        "Il bar è ancora aperto, torna a giocare!",
+        "Un altro drink e la fortuna girerà.",
+        "Ritenta, magari dopo uno shot andrà meglio.",
+        "I dadi non girano a tuo favore... per ora!",
+        "Bevi un sorso e sfida di nuovo la sorte.",
+        "Ancora niente? Riprova con più spirito!",
+        "Ogni giro è una scusa per bere ancora.",
+        "Non è andata? Nessun problema, un altro giro!"
+      ];
+
+      return (isWin ? winMessages : loseMessages)[Math.floor(Math.random() * 11)];
+    }
+
+    function closePopup() {
+      document.getElementById("popup").style.display = "none";
+    }
+
+    function launchConfetti() {
+      const container = document.getElementById("confetti");
+      for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement("div");
+        confetti.classList.add("confetti-piece");
+        confetti.style.backgroundColor = getRandomColor();
+        confetti.style.left = Math.random() * 100 + "%";
+        confetti.style.animationDuration = 2 + Math.random() * 2 + "s";
+        container.appendChild(confetti);
+      }
+      setTimeout(clearConfetti, 4000);
+    }
+
+    function clearConfetti() {
+      document.getElementById("confetti").innerHTML = "";
+    }
+
+    function getRandomColor() {
+      const colors = ["#FFDDC1", "#FFB3BA", "#B5EAD7", "#C7CEEA", "#FFFFBA"];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    drawRoulette();
+  </script>
+</body>
+</html>
