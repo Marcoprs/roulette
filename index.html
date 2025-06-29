@@ -2,20 +2,23 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Roulette PURA VIDA</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      text-align: center;
       margin: 0;
       padding: 20px;
-      overflow: hidden;
-      height: 100vh;
       background-color: #000;
       background-repeat: repeat;
       background-size: 150px;
       background-position: center;
       position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
     }
 
     #stars {
@@ -48,6 +51,8 @@
       font-family: 'Georgia', serif;
       z-index: 2;
       position: relative;
+      font-size: 7vw;
+      text-align: center;
     }
 
     canvas {
@@ -56,6 +61,10 @@
       box-shadow: 0 0 20px #222 inset, 0 0 15px #ffb347;
       z-index: 2;
       position: relative;
+      width: 90vw;
+      height: 90vw;
+      max-width: 400px;
+      max-height: 400px;
     }
 
     #container {
@@ -80,8 +89,8 @@
 
     button {
       margin-top: 20px;
-      padding: 12px 24px;
-      font-size: 20px;
+      padding: 16px 28px;
+      font-size: 22px;
       cursor: pointer;
       font-family: 'Segoe UI', sans-serif;
       transition: opacity 0.3s;
@@ -94,8 +103,8 @@
     }
 
     #message {
-      margin-top: 30px;
-      font-size: 26px;
+      margin-top: 20px;
+      font-size: 24px;
       font-weight: bold;
       height: 40px;
       z-index: 2;
@@ -139,15 +148,16 @@
       border: 3px solid #6a4c93;
       border-radius: 10px;
       z-index: 100;
-      font-size: 24px;
+      font-size: 22px;
       font-weight: bold;
       box-shadow: 0 0 20px rgba(0,0,0,0.4);
       font-family: 'Segoe UI', sans-serif;
+      text-align: center;
     }
 
     #popup button {
       margin-top: 15px;
-      font-size: 18px;
+      font-size: 20px;
     }
   </style>
 </head>
@@ -157,7 +167,7 @@
   <h1>Roulette PURA VIDA</h1>
   <div id="container">
     <div id="pointer"></div>
-    <canvas id="roulette" width="400" height="400"></canvas>
+    <canvas id="roulette"></canvas>
   </div>
   <br>
   <button id="spinButton" onclick="spin()">Gira la ruota</button>
@@ -170,7 +180,6 @@
   </div>
 
   <script>
-    // Generazione stelle animate
     const starsContainer = document.getElementById('stars');
     for (let i = 0; i < 100; i++) {
       const star = document.createElement('div');
@@ -184,18 +193,16 @@
       starsContainer.appendChild(star);
     }
 
-    // Roulette
     const canvas = document.getElementById("roulette");
     const ctx = canvas.getContext("2d");
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
-    const radius = 180;
+    const radius = canvas.width * 0.45;
     const segments = 9;
     const letters = ["P", "U", "R", "A", "V", "I", "D", "A", "🥃"];
-    const colors = letters.map((l, i) => {
-      if (l === "🥃") return "#FFD700"; // oro per shot
-      return i % 2 === 0 ? "#1c3d1c" : "#ffffff"; // verde scuro alternato a bianco
-    });
+    const colors = letters.map((l, i) => l === "🥃" ? "#FFD700" : i % 2 === 0 ? "#1c3d1c" : "#ffffff");
     let angleOffset = 0;
     const angleStep = (2 * Math.PI) / segments;
     let isSpinning = false;
@@ -217,7 +224,6 @@
         ctx.fillStyle = colors[i];
         ctx.fill();
 
-        // Separatori
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(radius * Math.cos(startAngle), radius * Math.sin(startAngle));
@@ -231,7 +237,7 @@
         ctx.rotate(-angleOffset - startAngle - angleStep / 2);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.font = "bold 26px 'Segoe UI', sans-serif";
+        ctx.font = "bold 22px 'Segoe UI', sans-serif";
         ctx.fillStyle = "#000";
         ctx.fillText(letters[i], 0, 0);
         ctx.restore();
@@ -257,9 +263,7 @@
     function spin() {
       if (isSpinning) return;
       isSpinning = true;
-      const button = document.getElementById("spinButton");
-      button.disabled = true;
-      button.style.opacity = 0.5;
+      document.getElementById("spinButton").disabled = true;
       document.getElementById("popup").style.display = "none";
       clearConfetti();
 
@@ -296,22 +300,17 @@
       const normalized = (angleOffset) % (2 * Math.PI);
       const pointerAngle = (3 * Math.PI / 2 - normalized + 2 * Math.PI) % (2 * Math.PI);
       const segmentIndex = Math.floor(pointerAngle / angleStep) % segments;
+      const isWin = segmentIndex === 8;
 
       const popup = document.getElementById("popup");
       const popupMessage = document.getElementById("popupMessage");
-
-      const isWin = segmentIndex === 8;
       popupMessage.textContent = getRandomMessage(isWin);
-
-      if (isWin) {
-        launchConfetti();
-      }
-
       popup.style.display = "block";
+
+      if (isWin) launchConfetti();
+
       isSpinning = false;
-      const button = document.getElementById("spinButton");
-      button.disabled = false;
-      button.style.opacity = 1;
+      document.getElementById("spinButton").disabled = false;
     }
 
     function getRandomMessage(isWin) {
